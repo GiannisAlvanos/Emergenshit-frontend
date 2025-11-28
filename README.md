@@ -1,16 +1,125 @@
-# React + Vite
+EmergenSh!t – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Εφαρμογή React για τον εντοπισμό, αξιολόγηση και ανάδειξη δημόσιων και ιδιωτικών τουαλετών.
+Το frontend επικοινωνεί με το backend API (Node.js + Express + MongoDB) και παρέχει μια πλήρη εμπειρία χρήστη με λειτουργίες:
 
-Currently, two official plugins are available:
+Αναζήτηση τουαλετών
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Προβολή τοποθεσίας σε διαδραστικό χάρτη
 
-## React Compiler
+Δημιουργία λογαριασμού & Login
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Προσθήκη νέας τουαλέτας
 
-## Expanding the ESLint configuration
+Προβολή λεπτομερειών τουαλέτας
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Reviews με πολυδιάστατη βαθμολόγηση
+
+Like / Dislike σε reviews
+
+Admin panel για έγκριση νέων τουαλετών
+
+
+-----------------------------------------------------------------------------------
+
+Εγκατάσταση:
+Clone το project
+git clone https://github.com/your-repo/emergenshit-frontend.git
+cd emergenshit-frontend
+npm install
+
+Δημιούργησε ένα αρχείο .env:
+VITE_API_BASE=http://localhost:4000/api
+VITE_GOOGLE_MAPS_KEY=PUT_YOUR_KEY_HERE
+
+npm run dev
+Η εφαρμογή θα ανοίξει στο: http://localhost:5173/
+
+-----------------------------------------------------------------------------------
+
+Σύνδεση με Backend
+
+Το frontend χρησιμοποιεί το αρχείο:
+
+src/api/api.js
+
+Για να καλέσει endpoints όπως:
+
+GET    /api/toilets
+POST   /api/reviews
+POST   /api/reviews/:id/like
+POST   /api/auth/login
+POST   /api/toilets
+
+Το JWT token αποθηκεύεται και διαχειρίζεται μέσω:
+
+AuthContext.jsx
+
+
+Κύριες Λειτουργίες:
+1)Home Page
+
+Εμφάνιση λίστας τουαλετών
+
+Χάρτης με markers
+
+Δυνατότητα επιλογής τουαλέτας
+
+2)Toilet Details Page
+
+Εμφάνιση πληροφοριών
+
+Αξιολόγηση με 5 διαφορετικά rating categories:
+
+Overall
+
+Cleanliness
+
+Amenities
+
+Spaciousness
+
+Layout
+
+Υποβολή review
+
+Like / Dislike reviews
+
+3)Add Toilet
+
+Φόρμα προσθήκης τουαλέτας
+
+Αποστολή στο backend
+
+Αναμονή για admin approval
+
+4)Authentication
+
+Login
+
+Register
+
+Auto–redirect όταν απαιτείται login
+
+5)Admin Panel
+
+Λίστα μη εγκεκριμένων τουαλετών
+
+Έγκριση / απόρριψη
+
+
+Routing
+
+Το App.jsx περιλαμβάνει:
+
+Public routes
+
+Protected routes μέσω PrivateRoute
+
+Παράδειγμα:
+
+<Route path="/add" element={<PrivateRoute><AddToilet/></PrivateRoute>} />
+
+
+This project is part of a university assignment.
+Not intended for commercial distribution.
