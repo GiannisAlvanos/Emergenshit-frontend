@@ -49,12 +49,21 @@ export default function AddToilet() {
     e.preventDefault();
     setLoading(true);
 
+    // --- START OF CORRECTION ---
+    // 1. Filter the amenities object to only include true values (the checked ones).
+    // 2. Map the filtered object keys to create an array of strings.
+    const activeAmenities = Object.keys(amenities).filter(
+      (key) => amenities[key]
+    );
+
     const data = {
       name,
       description,
       location,
-      amenities,
+      // 3. Use the corrected array of strings for the API payload.
+      amenities: activeAmenities, 
     };
+    // --- END OF CORRECTION ---
 
     try {
       await api.post("/toilets", data);
