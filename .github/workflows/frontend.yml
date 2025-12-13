@@ -2,51 +2,61 @@ name: Frontend CI/CD
 
 on:
   push:
-    # Συμπεριλαμβάνουμε και το develop για CI
     branches: [ "main" ]
   pull_request:
-    # Συμπεριλαμβάνουμε και το develop για CI
+    # Προσθέτουμε το main και τυχόν άλλα branches (π.χ. develop) για CI
     branches: [ "main" ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Default shell: bash
 
     steps:
-      # 1. Checkout ΚΩΔΙΚΑ (Frontend & Backend)
-      - name: Checkout code
+      # 1. Checkout (Frontend - Default Repo)
+      - name: Checkout Frontend Code
         uses: actions/checkout@v4
-        
-      # 2. Setup Node
+      
+      # 2. Checkout (Backend - Ξεχωριστό Repo)
+      - name: Checkout Backend Code
+        uses: actions/checkout@v4
+        with:
+          # !!! ΠΡΕΠΕΙ ΝΑ ΑΝΤΙΚΑΤΑΣΤΗΣΕΤΕ ΑΥΤΟ ΤΟ PLACEHOLDER !!!
+          # Βάλτε το πλήρες όνομα του Backend repository (π.χ. YourUserName/Emergenshit-backend)
+          repository: GiannisAlvanos/Emergenshit-backend 
+          # Ορίζουμε το path όπου θα κατεβεί ο Backend κώδικας
+          path: backend-repo 
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # --- 3. START BACKEND SERVICE (Για να τρέξουν τα Cypress E2E tests) ---
-      # ΥΠΟΘΕΣΗ: Το Backend project βρίσκεται στο φάκελο 'Emergenshit-backend'
+      # --- 3. START BACKEND SERVICE ---
       - name: Install and Start Backend (in background)
+        env:
+          # Χρειάζεται να περάσουμε το JWT_SECRET για να δουλέψουν τα tests
+          # Χρησιμοποιούμε το 'test_secret' που είναι ρυθμισμένο και στο backend.yml
+          JWT_SECRET: test_secret 
+          # Εάν ο Backend χρειάζεται άλλα secrets (π.χ. MONGODB_URI), προσθέστε τα εδώ
         run: |
           echo "Starting Backend on port 4000..."
-          # 1. Μετακίνηση στον φάκελο του Backend
-          cd Emergenshit-backend
           
-          # 2. Εγκατάσταση εξαρτήσεων Backend (npm ci είναι καλύτερο για CI)
+          # Μετακίνηση στον φάκελο που κατεβάσαμε το Backend
+          cd backend-repo 
+          
+          # Εγκατάσταση εξαρτήσεων Backend (χρησιμοποιούμε npm ci)
           npm ci
           
-          # 3. Ξεκίνημα Backend στο παρασκήνιο (background)
-          # Η εντολή από το package.json είναι 'npm start'
+          # Ξεκίνημα Backend στο παρασκήνιο (npm start)
           npm start & 
           
-          # 4. Αναμονή 5 δευτερολέπτων για να ξεκινήσει ο Backend server
+          # Αναμονή 5 δευτερολέπτων για να ξεκινήσει ο server
           sleep 5
           echo "Backend started."
-        # Επιστρέφουμε αυτόματα στον αρχικό φάκελο (Frontend root) για τα επόμενα βήματα
         
-      # --- 4. FRONTEND SETUP & TESTS ---
+      # --- 4. FRONTEND TESTS ---
       - name: Install dependencies (Frontend)
-        # Χρησιμοποιούμε npm ci, το standard για CI/CD
+        # Είμαστε πίσω στον ριζικό φάκελο του Frontend
         run: npm ci
 
       - name: Run unit tests (if any)
@@ -58,22 +68,17 @@ jobs:
           start: npm run dev
           wait-on: http://localhost:5173
         env:
-          # Το Cypress πρέπει να χρησιμοποιεί το localhost:4000 για να βρει το Backend
+          # ΤΩΡΑ το VITE_API_URL πρέπει να δείχνει στο Backend που μόλις ξεκινήσαμε
           VITE_API_URL: http://localhost:4000 
-          # Εάν ο κώδικας σας απαιτεί το secret, ίσως χρειαστεί να το βάλετε εδώ:
-          # VITE_API_URL: ${{ secrets.VITE_API_URL }} 
-          # Αλλά για E2E testing εντός CI, το localhost:4000 είναι σωστό.
-
+          # Αφαιρούμε το secrets.VITE_API_URL για το CI, καθώς το localhost είναι το σωστό
+          
   deploy:
-    # Θα εκτελεστεί μόνο αν το job 'test' περάσει επιτυχώς
     needs: test
     runs-on: ubuntu-latest
     
-    # ΠΡΟΣΟΧΗ: Το deploy πρέπει να γίνει ΜΟΝΟ σε push στο main
+    # Το Deploy τρέχει μόνο σε push στο main και εφόσον περάσει το test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Deploy to Render
-        # Εάν το secret είναι κενό (όπως βλέπουμε στα logs), το curl αποτυγχάνει.
-        # Βεβαιωθείτε ότι το secret RENDER_FRONTEND_HOOK είναι ρυθμισμένο.
         run: curl -X POST ${{ secrets.RENDER_FRONTEND_HOOK }}
