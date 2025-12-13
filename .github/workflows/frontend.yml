@@ -15,27 +15,27 @@ jobs:
       # 1. Checkout (Frontend - Default Repo)
       - name: Checkout Frontend Code
         uses: actions/checkout@v4
-      
+        
       # 2. Checkout (Backend - Ξεχωριστό Repo)
       - name: Checkout Backend Code
         uses: actions/checkout@v4
         with:
-          # !!! ΠΡΕΠΕΙ ΝΑ ΑΝΤΙΚΑΤΑΣΤΗΣΕΤΕ ΑΥΤΟ ΤΟ PLACEHOLDER !!!
-          # Βάλτε το πλήρες όνομα του Backend repository (π.χ. YourUserName/Emergenshit-backend)
+          # Βάλτε το πλήρες όνομα του Backend repository
           repository: GiannisAlvanos/Emergenshit-backend 
           # Ορίζουμε το path όπου θα κατεβεί ο Backend κώδικας
           path: backend-repo 
+          # Εάν το backend repo είναι private, θα χρειαστείτε ένα token
+          # token: ${{ secrets.PAT_FOR_BACKEND }} 
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # --- 3. START BACKEND SERVICE ---
+      # --- 3. START BACKEND SERVICE AND WAIT ---
       - name: Install and Start Backend (in background)
         env:
           # Χρειάζεται να περάσουμε το JWT_SECRET για να δουλέψουν τα tests
-          # Χρησιμοποιούμε το 'test_secret' που είναι ρυθμισμένο και στο backend.yml
           JWT_SECRET: test_secret 
           # Εάν ο Backend χρειάζεται άλλα secrets (π.χ. MONGODB_URI), προσθέστε τα εδώ
         run: |
@@ -44,15 +44,21 @@ jobs:
           # Μετακίνηση στον φάκελο που κατεβάσαμε το Backend
           cd backend-repo 
           
-          # Εγκατάσταση εξαρτήσεων Backend (χρησιμοποιούμε npm ci)
+          # Εγκατάσταση εξαρτήσεων Backend 
           npm ci
           
-          # Ξεκίνημα Backend στο παρασκήνιο (npm start)
+          # Ξεκίνημα Backend στο παρασκήνιο (το & είναι κρίσιμο)
+          # Command: npm start -> node server.js
           npm start & 
           
-          # Αναμονή 5 δευτερολέπτων για να ξεκινήσει ο server
-          sleep 5
-          echo "Backend started."
+          echo "Backend started. Now waiting for it to be accessible (max 60s)..."
+          
+          # Εγκατάσταση και χρήση 'wait-on' για αξιόπιστη αναμονή (60 δευτερόλεπτα timeout)
+          # Αυτό θα περιμένει μέχρι να λάβει απάντηση από το localhost:4000
+          npm install -g wait-on
+          wait-on http-get://localhost:4000 -t 60000
+          
+          echo "Backend is up and running!"
         
       # --- 4. FRONTEND TESTS ---
       - name: Install dependencies (Frontend)
@@ -65,12 +71,15 @@ jobs:
       - name: Run Cypress E2E
         uses: cypress-io/github-action@v6
         with:
+          # Start the frontend server
           start: npm run dev
+          # Wait only for the frontend to be ready
           wait-on: http://localhost:5173
+          # Increased timeout for the frontend to start
+          wait-on-timeout: 60000 
         env:
           # ΤΩΡΑ το VITE_API_URL πρέπει να δείχνει στο Backend που μόλις ξεκινήσαμε
           VITE_API_URL: http://localhost:4000 
-          # Αφαιρούμε το secrets.VITE_API_URL για το CI, καθώς το localhost είναι το σωστό
           
   deploy:
     needs: test
