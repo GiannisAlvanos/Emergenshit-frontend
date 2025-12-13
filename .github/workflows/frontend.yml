@@ -2,25 +2,52 @@ name: Frontend CI/CD
 
 on:
   push:
+    # Συμπεριλαμβάνουμε και το develop για CI
     branches: [ "main" ]
   pull_request:
+    # Συμπεριλαμβάνουμε και το develop για CI
     branches: [ "main" ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Default shell: bash
 
     steps:
+      # 1. Checkout ΚΩΔΙΚΑ (Frontend & Backend)
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
+      # 2. Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      # --- 3. START BACKEND SERVICE (Για να τρέξουν τα Cypress E2E tests) ---
+      # ΥΠΟΘΕΣΗ: Το Backend project βρίσκεται στο φάκελο 'Emergenshit-backend'
+      - name: Install and Start Backend (in background)
+        run: |
+          echo "Starting Backend on port 4000..."
+          # 1. Μετακίνηση στον φάκελο του Backend
+          cd Emergenshit-backend
+          
+          # 2. Εγκατάσταση εξαρτήσεων Backend (npm ci είναι καλύτερο για CI)
+          npm ci
+          
+          # 3. Ξεκίνημα Backend στο παρασκήνιο (background)
+          # Η εντολή από το package.json είναι 'npm start'
+          npm start & 
+          
+          # 4. Αναμονή 5 δευτερολέπτων για να ξεκινήσει ο Backend server
+          sleep 5
+          echo "Backend started."
+        # Επιστρέφουμε αυτόματα στον αρχικό φάκελο (Frontend root) για τα επόμενα βήματα
+        
+      # --- 4. FRONTEND SETUP & TESTS ---
+      - name: Install dependencies (Frontend)
+        # Χρησιμοποιούμε npm ci, το standard για CI/CD
+        run: npm ci
 
       - name: Run unit tests (if any)
         run: npm test --if-present
@@ -31,12 +58,22 @@ jobs:
           start: npm run dev
           wait-on: http://localhost:5173
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          # Το Cypress πρέπει να χρησιμοποιεί το localhost:4000 για να βρει το Backend
+          VITE_API_URL: http://localhost:4000 
+          # Εάν ο κώδικας σας απαιτεί το secret, ίσως χρειαστεί να το βάλετε εδώ:
+          # VITE_API_URL: ${{ secrets.VITE_API_URL }} 
+          # Αλλά για E2E testing εντός CI, το localhost:4000 είναι σωστό.
 
   deploy:
+    # Θα εκτελεστεί μόνο αν το job 'test' περάσει επιτυχώς
     needs: test
     runs-on: ubuntu-latest
+    
+    # ΠΡΟΣΟΧΗ: Το deploy πρέπει να γίνει ΜΟΝΟ σε push στο main
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Deploy to Render
+        # Εάν το secret είναι κενό (όπως βλέπουμε στα logs), το curl αποτυγχάνει.
+        # Βεβαιωθείτε ότι το secret RENDER_FRONTEND_HOOK είναι ρυθμισμένο.
         run: curl -X POST ${{ secrets.RENDER_FRONTEND_HOOK }}
