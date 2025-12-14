@@ -123,3 +123,128 @@ Protected routes μέσω PrivateRoute
 
 This project is part of a university assignment.
 Not intended for commercial distribution.
+-----------------------------------------------------------------------------------------------
+(Παραδοτεο 2)
+
+Testing Strategy (Frontend – E2E)
+
+Για τον έλεγχο της ορθής λειτουργίας του frontend έχουν υλοποιηθεί End-to-End (E2E) acceptance tests με χρήση του Cypress.
+
+Τα tests καλύπτουν 3 διαφορετικές Ροές Χρήστη (User Flows), οι οποίες συνολικά καλύπτουν όλες τις βασικές οθόνες της εφαρμογής.
+
+Εργαλεία:
+
+ - Cypress
+
+ - Cypress Fixtures
+
+ - Cypress Requests (API setup)
+
+Για την εκτέλεση των Tests χρησιμοποιείται η εντολή
+
+npm run cypress:run
+ή για interactive mode:
+npm run cypress:open
+--------------------------------------------------------------------------------------------------
+Υλοποιημένα User Flows
+
+Flow 1 – Happy Path: Προσθήκη Νέας Τουαλέτας:
+
+	Login χρήστη
+
+	Πλοήγηση στη σελίδα Add Toilet
+
+	Συμπλήρωση φόρμας (όνομα, περιγραφή, τοποθεσία, amenities)
+
+	Επιτυχής υποβολή
+
+	Εμφάνιση επιβεβαιωτικού μηνύματος
+
+	Redirect στη Home page
+
+Flow 2 – Happy Path: Δημιουργία Review:
+
+	Δημιουργία ενεργής τουαλέτας μέσω API
+
+	Πλοήγηση στη σελίδα λεπτομερειών
+
+	Υποβολή review με όλα τα rating fields
+
+	Επιβεβαίωση εμφάνισης του review
+
+Flow 3 – Unhappy Path: Ελλιπή Δεδομένα:
+
+	Απόπειρα υποβολής φόρμας χωρίς τοποθεσία
+
+	Εμφάνιση κατάλληλου μηνύματος σφάλματος
+
+	Αποτυχία υποβολής
+
+Τα tests βρίσκονται στον φάκελο:
+
+cypress/e2e/
+-----------------------------------------------------------------------------------------------------------
+
+CI/CD Pipeline (GitHub Actions)
+
+Το frontend διαθέτει CI/CD pipeline μέσω GitHub Actions, το οποίο εκτελείται αυτόματα σε κάθε push ή pull request προς το main branch.
+
+Τι περιλαμβάνει το pipeline:
+
+	Install dependencies
+
+	Build του React app
+
+	Εκτέλεση Cypress E2E tests
+
+	Deploy στο Render (μόνο αν όλα τα tests περάσουν επιτυχώς)
+
+Αρχείο workflow:
+
+.github/workflows/frontend.yml
+------------------------------------------------------------------------------------------------------------
+
+Deployment (Render):
+
+Το frontend έχει γίνει deploy στο Render ως Static Web Service.
+
+Ρυθμίσεις:
+
+Build Command:
+
+npm install && npm run build
+
+
+Publish Directory:
+
+dist
+
+Environment Variables (Render / GitHub Secrets)
+
+Τα ευαίσθητα δεδομένα ΔΕΝ αποθηκεύονται στο repository.
+
+Χρησιμοποιούνται:
+
+Render Environment Variables
+
+GitHub Actions Secrets
+
+VITE_API_BASE=https://emergenshit-backend-1.onrender.com/
+VITE_GOOGLE_MAPS_KEY=your_google_maps_api_key
+
+Environment Variables & Ασφάλεια
+
+Το αρχείο .env:
+
+ΔΕΝ ανεβαίνει στο GitHub
+
+Περιλαμβάνεται στο .gitignore
+
+Όλα τα production secrets:
+
+Δηλώνονται στο Render
+
+Δηλώνονται στα GitHub Actions Secrets για το CI/CD pipeline
+
+URL
+https://emergenshit-frontend.onrender.com/
