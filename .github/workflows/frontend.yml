@@ -1,0 +1,93 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # Προσθέτουμε το main και τυχόν άλλα branches (π.χ. develop) για CI
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout (Frontend - Default Repo)
+      - name: Checkout Frontend Code
+        uses: actions/checkout@v4
+        
+      # 2. Checkout (Backend - Ξεχωριστό Repo)
+      - name: Checkout Backend Code
+        uses: actions/checkout@v4
+        with:
+          repository: GiannisAlvanos/Emergenshit-backend 
+          path: backend-repo 
+          # Uncomment this line if the backend repo is private:
+          # token: ${{ secrets.PAT_FOR_BACKEND }} 
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # --- 3. START BACKEND SERVICE AND WAIT ---
+      - name: Install and Start Backend (in background)
+        env:
+          # CRITICAL FIX: Add the MONGODB_URI using the secret you created
+          MONGODB_URI: ${{ secrets.MONGODB_CI_URI }} 
+          # JWT_SECRET is needed for authentication in the tests
+          JWT_SECRET: test_secret 
+          # Other environment variables your backend needs:
+          PORT: 4000
+          NODE_ENV: development
+          
+        run: |
+          echo "Starting Backend on port 4000..."
+          
+          # Μετακίνηση στον φάκελο που κατεβάσαμε το Backend
+          cd backend-repo 
+          
+          # Εγκατάσταση εξαρτήσεων Backend 
+          npm ci
+          
+          # Ξεκίνημα Backend στο παρασκήνιο (το & είναι κρίσιμο)
+          npm start & 
+          
+          echo "Backend started. Now waiting for it to be accessible (max 60s)..."
+          
+          # Εγκατάσταση και χρήση 'wait-on' για αξιόπιστη αναμονή
+          npm install -g wait-on
+          # Wait until port 4000 responds to an HTTP request
+          wait-on http-get://localhost:4000 -t 60000
+          
+          echo "Backend is up and running!"
+        
+      # --- 4. FRONTEND TESTS ---
+      - name: Install dependencies (Frontend)
+        run: npm ci
+
+      - name: Run unit tests (if any)
+        run: npm test --if-present
+
+      - name: Run Cypress E2E
+        uses: cypress-io/github-action@v6
+        with:
+          # Start the frontend server
+          start: npm run dev
+          # Wait only for the frontend to be ready
+          wait-on: http://localhost:5173
+          wait-on-timeout: 60000 
+        env:
+          # Set the API URL for the frontend application and Cypress
+          VITE_API_URL: http://localhost:4000 
+          
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    # Το Deploy τρέχει μόνο σε push στο main και εφόσον περάσει το test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy to Render
+        run: curl -X POST ${{ secrets.RENDER_FRONTEND_HOOK }}
